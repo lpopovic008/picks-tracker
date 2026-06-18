@@ -4,11 +4,6 @@ Telegram Picks Listener
 Polls a list of Telegram channels for new messages, sends each new message
 (plus any attached image) to Google Gemini to extract structured bet info,
 and appends the result as a row in a Google Sheet.
-
-Designed to run on a schedule (e.g. via GitHub Actions) rather than as an
-always-on process. It tracks the last message it processed per channel
-inside the "_state" tab of the sheet itself, so no separate database or
-persistent disk is needed.
 """
 
 import os
@@ -26,16 +21,20 @@ from google import genai
 from google.genai import types
 
 # ----------------------------------------------------------------------
-# Config — edit this section with your actual channel usernames
+# Config — use @usernames for public channels, numeric IDs for private
 # ----------------------------------------------------------------------
 
 CHANNELS = [
-    "CapperSync",   # @username without the @ symbol
-    "cappersfree",   # for private channels use the numeric ID as an integer e.g. -1001234567890
+    "betting_intel",           # public: username without @
+    -1003984449468,            # CapperSync
+    -1003641992899,            # MONEYCAPPERSFREE
+    -1003641018140,            # EXCLUSIVE PLAYS
+    -1002077943194,            # CAPPERS FREE 🎰
+    -1001858676502,            # Life’s a Gamble 🎲
 ]
 
 GEMINI_MODEL = "gemini-2.0-flash"
-FIRST_RUN_BACKFILL = 15   # how many recent messages to pull the first time a channel is seen
+FIRST_RUN_BACKFILL = 15
 PICKS_TAB = "Picks"
 STATE_TAB = "_state"
 
@@ -107,11 +106,16 @@ def save_state(ws, channel, message_id):
 # Gemini extraction
 # ----------------------------------------------------------------------
 
-def extract_bets(gemini_client, text, image_bytes):
+def extract_bets(gemini_client, text, image_bytes, msg_id):
     parts = []
 
     if image_bytes:
         parts.append(types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"))
+        print(f"  [msg {msg_id}] sending image + text to Gemini")
+    else:
+        print(f"  [msg {msg_id}] sending text-only to Gemini")
+
+    print(f"  [msg {msg_id}] text preview: {repr((text or '')[:120])}")
 
     full_prompt = f"{EXTRACTION_PROMPT}\n\nMessage text/caption:\n{text or '(none)'}"
     parts.append(full_prompt)
@@ -122,13 +126,17 @@ def extract_bets(gemini_client, text, image_bytes):
     )
 
     raw = response.text.strip()
+    print(f"  [msg {msg_id}] Gemini raw response: {raw[:300]}")
+
     raw = re.sub(r"^```(json)?|```$", "", raw, flags=re.MULTILINE).strip()
 
     try:
         bets = json.loads(raw)
-        return bets if isinstance(bets, list) else []
+        result = bets if isinstance(bets, list) else []
+        print(f"  [msg {msg_id}] extracted {len(result)} bet(s)")
+        return result
     except json.JSONDecodeError:
-        print(f"Could not parse Gemini response as JSON: {raw[:200]}")
+        print(f"  [msg {msg_id}] JSON parse failed: {raw[:200]}")
         return []
 
 
@@ -157,13 +165,21 @@ def main():
 
     with tg_client:
         for channel in CHANNELS:
+            print(f"\n=== Processing channel: {channel} ===")
             last_id = state.get(str(channel), 0)
+            print(f"  Last known message ID: {last_id}")
 
-            if last_id:
-                messages = list(tg_client.iter_messages(channel, min_id=last_id, reverse=True))
-            else:
-                messages = list(tg_client.iter_messages(channel, limit=FIRST_RUN_BACKFILL))
-                messages.reverse()
+            try:
+                if last_id:
+                    messages = list(tg_client.iter_messages(channel, min_id=last_id, reverse=True))
+                else:
+                    messages = list(tg_client.iter_messages(channel, limit=FIRST_RUN_BACKFILL))
+                    messages.reverse()
+            except Exception as e:
+                print(f"  ERROR reading channel {channel}: {e}")
+                continue
+
+            print(f"  Found {len(messages)} new message(s)")
 
             if not messages:
                 continue
@@ -175,15 +191,17 @@ def main():
                 try:
                     text = msg.text or ""
                     image_bytes = None
+
                     if msg.photo:
                         buf = BytesIO()
                         tg_client.download_media(msg, file=buf)
                         image_bytes = buf.getvalue()
-
-                    if not text and not image_bytes:
+                        print(f"  [msg {msg.id}] has photo ({len(image_bytes)} bytes)")
+                    elif not text:
+                        print(f"  [msg {msg.id}] no text or photo, skipping")
                         continue
 
-                    bets = extract_bets(gemini_client, text, image_bytes)
+                    bets = extract_bets(gemini_client, text, image_bytes, msg.id)
                     if not bets:
                         continue
 
@@ -198,10 +216,12 @@ def main():
                             bet.get("units_or_confidence"), bet.get("notes"),
                             link, "",
                         ])
+                        print(f"  [msg {msg.id}] wrote row: {bet.get('capper')} | {bet.get('matchup')} | {bet.get('selection')}")
                 except Exception as e:
-                    print(f"Error on message {msg.id} in {channel}: {e}")
+                    print(f"  ERROR on message {msg.id}: {e}")
 
             save_state(state_ws, str(channel), newest_id)
+            print(f"  State saved. Newest ID: {newest_id}")
 
 
 if __name__ == "__main__":
