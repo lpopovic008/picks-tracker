@@ -30,7 +30,7 @@ from google.genai import types
 # ----------------------------------------------------------------------
 
 CHANNELS = [
-    "CappersSync",   # @username without the @ symbol
+    "CapperSync",   # @username without the @ symbol
     "cappersfree",   # for private channels use the numeric ID as an integer e.g. -1001234567890
 ]
 
