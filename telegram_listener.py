@@ -24,31 +24,54 @@ import anthropic
 # ----------------------------------------------------------------------
 
 CHANNELS = [
-    "betting_intel",           # public: username without @, private: -1001234567890
-    -1003984449468,            # CapperSync
-    -1003641992899,            # MONEYCAPPERSFREE
-    -1003641018140,            # EXCLUSIVE PLAYS
-    -1002077943194,            # CAPPERS FREE 🎰
-    -1001858676502,            # Life’s a Gamble 🎲
+    "channel_username_one",
+    -1001234567890,
 ]
+
+# ------------------------------------------------------------------
+# Per-channel context — fill this in for each channel you track.
+# This tells Claude WHERE to find the capper name in each channel's
+# posts so it doesn't confuse the channel name with the capper name.
+#
+# Key   = channel username string OR numeric ID (must match CHANNELS exactly)
+# Value = plain-English description of the channel's posting format
+# ------------------------------------------------------------------
+CHANNEL_CONTEXT = {
+    "channel_username_one": (
+        "Aggregator channel. Each post covers a different capper. "
+        "The capper name appears at the very start of the message text or image caption "
+        "before the pick details. Do NOT use the channel name as the capper."
+    ),
+    -1001234567890: (
+        "Aggregator channel. Capper names appear as hashtags like #HammeringHank "
+        "at the start of each post. Extract the word after # as the capper name. "
+        "Do NOT use the channel name as the capper."
+    ),
+    # Single-capper channel example:
+    # "johnnybets_official": "Single capper channel. Every post is from 'JohnnyBets'.",
+}
 
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 FIRST_RUN_BACKFILL = 15
 PICKS_TAB = "Picks"
 STATE_TAB = "_state"
 
-EXTRACTION_PROMPT = """You are reading a message from a Telegram sports betting channel.
-Channels post in different styles: sometimes plain text where the capper's name
-appears as a leading hashtag (e.g. "#JohnnyBets Lakers -4.5 -110 2u"), and
-sometimes an image of a bet slip with a short text caption that names the capper.
+
+def build_prompt(channel, channel_context):
+    return f"""You are reading a message from a Telegram sports betting channel.
+
+Channel: {channel}
+Channel format: {channel_context}
+
+Use the channel format description above to correctly identify the capper name.
+The capper name ALWAYS comes from the message content, never from the channel name itself.
 
 For each message, classify it and extract any bets found.
-
 Respond with ONLY a JSON array (no markdown fences, no explanation).
 Each item must have exactly this shape:
 
 [
-  {
+  {{
     "pick_status": "new_pick" | "result" | "recap" | "promo",
     "capper": string or null,
     "sport": string or null,
@@ -58,17 +81,18 @@ Each item must have exactly this shape:
     "odds": string or null,
     "units_or_confidence": string or null,
     "notes": string or null
-  }
+  }}
 ]
 
 pick_status rules:
-- "new_pick": a fresh bet being posted for the first time, game hasn't started yet
-- "result": reporting the outcome of a past bet (contains ✅ ❌, "won", "lost", "hit", final scores, W/L records)
+- "new_pick": a fresh bet posted for the first time; the game has not yet started
+- "result": reporting the outcome of a past bet (✅ ❌, "won", "lost", "hit", W/L records)
 - "recap": summarising recent performance across multiple picks
 - "promo": advertisement, invite link, or call to join a VIP/premium channel
 
 If no bet information at all, respond with [].
-If a message mixes new picks and results (e.g. yesterday's result + today's pick), return separate objects for each."""
+If a message mixes new picks and results, return a separate object for each."""
+
 
 # ----------------------------------------------------------------------
 # Google Sheets helpers
@@ -111,11 +135,6 @@ def save_state(ws, channel, message_id):
 
 
 def load_existing_picks(ws):
-    """
-    Returns two sets for deduplication:
-    - seen_messages: (channel, message_id) — prevents writing same message twice
-    - seen_picks: (capper, date_only, selection) — prevents cross-channel duplicates
-    """
     seen_messages = set()
     seen_picks = set()
     rows = ws.get_all_records()
@@ -136,7 +155,7 @@ def load_existing_picks(ws):
 # Claude extraction
 # ----------------------------------------------------------------------
 
-def extract_bets(claude_client, text, image_bytes, msg_id):
+def extract_bets(claude_client, text, image_bytes, msg_id, channel):
     content = []
 
     if image_bytes:
@@ -159,11 +178,18 @@ def extract_bets(claude_client, text, image_bytes, msg_id):
         "text": f"Message text/caption:\n{text or '(none)'}"
     })
 
+    channel_context = CHANNEL_CONTEXT.get(
+        channel,
+        "Format unknown. Extract the capper name from the message content. "
+        "Do not use the channel name as the capper name."
+    )
+    prompt = build_prompt(channel, channel_context)
+
     try:
         response = claude_client.messages.create(
             model=CLAUDE_MODEL,
             max_tokens=1000,
-            system=EXTRACTION_PROMPT,
+            system=prompt,
             messages=[{"role": "user", "content": content}],
         )
         raw = response.content[0].text.strip()
@@ -172,7 +198,7 @@ def extract_bets(claude_client, text, image_bytes, msg_id):
         result = bets if isinstance(bets, list) else []
         new_picks = [b for b in result if b.get("pick_status") == "new_pick"]
         skipped = len(result) - len(new_picks)
-        print(f"  [msg {msg_id}] {len(new_picks)} new pick(s), {skipped} recap/result/promo skipped")
+        print(f"  [msg {msg_id}] {len(new_picks)} new pick(s), {skipped} skipped (recap/result/promo)")
         return new_picks
 
     except Exception as e:
@@ -230,7 +256,6 @@ def main():
             for msg in messages:
                 newest_id = max(newest_id, msg.id)
 
-                # Skip if we already wrote rows for this exact message
                 msg_key = (str(channel), str(msg.id))
                 if msg_key in seen_messages:
                     print(f"  [msg {msg.id}] already processed, skipping")
@@ -248,10 +273,9 @@ def main():
                         print(f"  [msg {msg.id}] no text or photo, skipping")
                         continue
 
-                    bets = extract_bets(claude_client, text, image_bytes, msg.id)
+                    bets = extract_bets(claude_client, text, image_bytes, msg.id, channel)
 
                     for bet in bets:
-                        # Cross-channel duplicate check
                         date_str = msg.date.strftime("%Y-%m-%d %H:%M UTC")
                         date_only = date_str[:10]
                         capper_key = str(bet.get("capper") or "").lower().strip()
