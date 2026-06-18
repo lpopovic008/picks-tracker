@@ -30,8 +30,8 @@ import PIL.Image
 # ----------------------------------------------------------------------
 
 CHANNELS = [
-    "CapperSync",   # public channel username, no "@"
-    "CAPPERS FREE 🎰",   # for a private channel with no username, use its numeric ID instead (see SETUP.md)
+    "CappersSync",   # public channel username, no "@"
+    "cappersfree",   # for a private channel with no username, use its numeric ID instead (see SETUP.md)
 ]
 
 GEMINI_MODEL = "gemini-2.0-flash"
