@@ -2,13 +2,13 @@ name: Telegram Picks Listener
 
 on:
   schedule:
-    - cron: "*/20 * * * *"   # every 20 minutes — adjust as you like
-  workflow_dispatch: {}       # lets you trigger it manually from the Actions tab
+    - cron: "*/20 * * * *"
+  workflow_dispatch: {}
 
 jobs:
   run-listener:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
