@@ -7,508 +7,273 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  /* ── REPLACE YOUR_SHEET_ID_HERE IN THE CONFIG BELOW ── */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --bg:          #0B0D16;
-    --surface:     #141720;
-    --surface2:    #1C2030;
-    --border:      rgba(255,255,255,0.07);
-    --border2:     rgba(255,255,255,0.12);
-    --text:        #F1F5F9;
-    --muted:       #94A3B8;
-    --green:       #22C55E;
-    --green-bg:    rgba(34,197,94,0.12);
-    --red:         #EF4444;
-    --red-bg:      rgba(239,68,68,0.12);
-    --gold:        #F59E0B;
-    --gold-bg:     rgba(245,158,11,0.12);
-    --blue:        #60A5FA;
-    --blue-bg:     rgba(96,165,250,0.10);
-    --radius:      12px;
-    --radius-sm:   8px;
-  }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    font-size: 15px;
-    line-height: 1.5;
-    min-height: 100vh;
-    padding-bottom: 40px;
-  }
-
-  .mono { font-family: 'JetBrains Mono', monospace; }
-
-  /* ── HEADER ── */
-  .header {
-    padding: 24px 20px 20px;
-    max-width: 900px;
-    margin: 0 auto;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-  }
-  .header-eyebrow { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-bottom: 3px; }
-  .header-title   { font-size: 24px; font-weight: 500; }
-  .header-right   { text-align: right; flex-shrink: 0; }
-  .last-updated   { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
-
-  .refresh-btn {
-    background: var(--surface);
-    border: 0.5px solid var(--border2);
-    color: var(--muted);
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
-    padding: 5px 12px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin-left: auto;
-  }
-  .refresh-btn:hover { background: var(--surface2); color: var(--text); }
-  .refresh-btn svg { width: 13px; height: 13px; }
-
-  /* ── MAIN CONTENT ── */
-  .main { max-width: 900px; margin: 0 auto; padding: 0 20px; }
-
-  /* ── METRICS ROW ── */
-  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 28px; }
-  .metric-card {
-    background: var(--surface);
-    border: 0.5px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 12px 14px;
-  }
-  .metric-lbl { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
-  .metric-val { font-size: 22px; font-weight: 500; font-family: 'JetBrains Mono', monospace; }
-
-  /* ── SECTION ── */
-  .section { margin-bottom: 28px; }
-  .section-header {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    margin-bottom: 12px;
-  }
-  .section-icon { width: 18px; height: 18px; flex-shrink: 0; }
-  .section-title { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-  .section-count { font-size: 11px; color: var(--muted); background: var(--surface); border: 0.5px solid var(--border); padding: 1px 7px; border-radius: 20px; }
-
-  /* ── CARD GRID ── */
-  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-
-  /* ── CAPPER CARD ── */
-  .cap-card {
-    background: var(--surface);
-    border: 0.5px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px;
-    transition: border-color 0.15s;
-    position: relative;
-  }
-  .cap-card:hover { border-color: var(--border2); }
-
-  .cap-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
-  .cap-info { flex: 1; min-width: 0; }
-  .cap-name {
-    font-weight: 500;
-    font-size: 14px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 4px;
-  }
-  .sport-pill {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 500;
-    padding: 2px 7px;
-    border-radius: 4px;
-    background: var(--blue-bg);
-    color: var(--blue);
-    letter-spacing: 0.04em;
-  }
-  .star-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 2px;
-    line-height: 1;
-    flex-shrink: 0;
-    transition: transform 0.1s;
-    min-width: 32px;
-    min-height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-  }
-  .star-btn:active { transform: scale(0.85); }
-  .star-btn svg { width: 18px; height: 18px; }
-
-  .cap-record { font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--muted); margin-bottom: 10px; }
-
-  .win-bar-wrap { margin-bottom: 6px; }
-  .win-bar {
-    display: flex;
-    height: 5px;
-    border-radius: 3px;
-    overflow: hidden;
-    gap: 1px;
-  }
-  .bar-w     { background: var(--green); }
-  .bar-l     { background: var(--red); }
-  .bar-p     { background: rgba(255,255,255,0.12); }
-  .bar-pend  { background: rgba(255,255,255,0.06); }
-
-  .win-pct { font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 500; }
-  .pct-hot  { color: var(--green); }
-  .pct-cold { color: var(--red); }
-  .pct-mid  { color: var(--text); }
-  .pct-none { color: var(--muted); }
-
-  /* ── PENDING BADGE ── */
-  .pending-badge {
-    display: inline-block;
-    font-size: 10px;
-    color: var(--muted);
-    margin-top: 3px;
-  }
-
-  /* ── EMPTY STATE ── */
-  .empty-state {
-    font-size: 13px;
-    color: var(--muted);
-    padding: 16px 0 4px;
-  }
-
-  /* ── STATUS BANNER ── */
-  .status-banner {
-    background: var(--surface);
-    border: 0.5px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 14px 16px;
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 28px;
-    display: none;
-  }
-  .status-banner.error { border-color: rgba(239,68,68,0.3); color: var(--red); display: block; }
-  .status-banner.loading { display: block; }
-
-  /* ── SKELETON ── */
-  .skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-  .skeleton-card {
-    background: var(--surface);
-    border: 0.5px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px;
-    height: 110px;
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
-
-  /* ── DIVIDER ── */
-  .divider { border: none; border-top: 0.5px solid var(--border); margin: 8px 0 20px; }
-
-  /* ── MOBILE ── */
-  @media (max-width: 480px) {
-    .header { padding: 20px 16px 16px; }
-    .main { padding: 0 16px; }
-    .metrics { grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .metric-val { font-size: 18px; }
-    .card-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-    .cap-name { font-size: 13px; }
-  }
-  @media (max-width: 360px) {
-    .card-grid { grid-template-columns: 1fr; }
-  }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0D16;--surface:#141720;--surface2:#1C2030;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --text:#F1F5F9;--muted:#94A3B8;
+  --green:#22C55E;--red:#EF4444;--gold:#F59E0B;--blue:#60A5FA;
+  --radius:12px;--radius-sm:8px;
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;min-height:100vh;padding-bottom:60px}
+.wrap{max-width:880px;margin:0 auto;padding:0 18px}
+.header{padding:24px 0 20px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500;margin-bottom:3px}
+.title{font-size:22px;font-weight:500}
+.meta{font-size:11px;color:var(--muted);text-align:right}
+.btn{background:var(--surface);border:.5px solid var(--border2);color:var(--muted);font-size:12px;font-family:'Inter',sans-serif;padding:6px 13px;border-radius:var(--radius-sm);cursor:pointer;margin-top:6px;display:inline-block}
+.btn:hover{background:var(--surface2);color:var(--text)}
+.banner{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius-sm);padding:13px 15px;font-size:13px;color:var(--muted);margin-bottom:22px;display:none}
+.banner.err{border-color:rgba(239,68,68,.35);color:#FCA5A5;display:block}
+.banner.ok{border-color:rgba(34,197,94,.25);color:#86EFAC;display:block}
+.banner.info{display:block}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:26px}
+.mc{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px}
+.mc-lbl{font-size:11px;color:var(--muted);margin-bottom:3px}
+.mc-val{font-size:21px;font-weight:500;font-family:'JetBrains Mono',monospace}
+.section{margin-bottom:26px}
+.sec-hdr{display:flex;align-items:center;gap:7px;margin-bottom:11px}
+.sec-title{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.sec-badge{font-size:10px;color:var(--muted);background:var(--surface);border:.5px solid var(--border);padding:1px 7px;border-radius:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.card{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:13px}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:7px}
+.capper-name{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sport{font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:rgba(96,165,250,.12);color:var(--blue);margin-top:3px;display:inline-block}
+.star{background:none;border:none;cursor:pointer;padding:2px;font-size:20px;line-height:1;min-width:30px;min-height:30px;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:transform .1s}
+.star:active{transform:scale(.85)}
+.record{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--muted);margin-bottom:9px}
+.bar{display:flex;height:5px;border-radius:3px;overflow:hidden;gap:1px;margin-bottom:5px}
+.bar-w{background:var(--green)}
+.bar-l{background:var(--red)}
+.bar-p{background:rgba(255,255,255,.15)}
+.bar-u{background:rgba(255,255,255,.06)}
+.pct{font-size:13px;font-family:'JetBrains Mono',monospace;font-weight:500}
+.hot-pct{color:var(--green)}
+.cold-pct{color:var(--red)}
+.mid-pct{color:var(--text)}
+.none-pct{color:var(--muted)}
+.empty{font-size:13px;color:var(--muted);padding:6px 0}
+.divider{border:none;border-top:.5px solid var(--border);margin:4px 0 22px}
+@media(max-width:480px){
+  .grid{grid-template-columns:1fr 1fr}
+  .metrics{gap:8px}
+  .mc-val{font-size:18px}
+}
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<div class="header">
-  <div>
-    <p class="header-eyebrow">Capper Intel</p>
-    <p class="header-title" id="month-label">Loading...</p>
-  </div>
-  <div class="header-right">
-    <p class="last-updated" id="last-updated">—</p>
-    <button class="refresh-btn" onclick="refresh()" id="refresh-btn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-      </svg>
-      Refresh
-    </button>
-  </div>
-</div>
-
-<div class="main">
-
-  <div class="status-banner" id="status-banner"></div>
-
-  <div class="metrics" id="metrics">
-    <div class="metric-card"><p class="metric-lbl">Picks this month</p><p class="metric-val mono" id="m-picks">—</p></div>
-    <div class="metric-card"><p class="metric-lbl">Win rate</p><p class="metric-val mono" id="m-winrate">—</p></div>
-    <div class="metric-card"><p class="metric-lbl">Cappers tracked</p><p class="metric-val mono" id="m-cappers">—</p></div>
+  <div class="header">
+    <div>
+      <p class="eyebrow">Capper Intel</p>
+      <p class="title" id="hdr-month">—</p>
+    </div>
+    <div class="meta">
+      <p id="hdr-updated">—</p>
+      <button class="btn" onclick="load()">Refresh</button>
+    </div>
   </div>
 
-  <!-- HOT -->
+  <div class="banner info" id="banner">Connecting to sheet...</div>
+
+  <div class="metrics">
+    <div class="mc"><p class="mc-lbl">Picks this month</p><p class="mc-val" id="m-total">—</p></div>
+    <div class="mc"><p class="mc-lbl">Win rate</p><p class="mc-val" id="m-wr">—</p></div>
+    <div class="mc"><p class="mc-lbl">Cappers</p><p class="mc-val" id="m-cap">—</p></div>
+  </div>
+
   <div class="section">
-    <div class="section-header">
-      <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
-      </svg>
-      <span class="section-title">Hot this month</span>
-      <span class="section-count" id="hot-count">0</span>
+    <div class="sec-hdr">
+      <span style="font-size:16px">🔥</span>
+      <span class="sec-title">Hot this month</span>
+      <span class="sec-badge" id="hot-badge">0</span>
     </div>
-    <div class="card-grid" id="hot-grid">
-      <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
-    </div>
-    <p class="empty-state" id="hot-empty" style="display:none">No cappers above 55% win rate with 5+ graded picks yet.</p>
+    <div class="grid" id="hot-grid"></div>
+    <p class="empty" id="hot-empty" style="display:none">No cappers above 55% with 2+ graded picks yet.</p>
   </div>
 
   <hr class="divider">
 
-  <!-- COLD -->
   <div class="section">
-    <div class="section-header">
-      <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/>
-        <path d="m20 16-4-4 4-4M4 8l4 4-4 4M16 4l-4 4-4-4M8 20l4-4 4 4"/>
-      </svg>
-      <span class="section-title">Cold this month</span>
-      <span class="section-count" id="cold-count">0</span>
+    <div class="sec-hdr">
+      <span style="font-size:16px">🥶</span>
+      <span class="sec-title">Cold this month</span>
+      <span class="sec-badge" id="cold-badge">0</span>
     </div>
-    <div class="card-grid" id="cold-grid">
-      <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
-    </div>
-    <p class="empty-state" id="cold-empty" style="display:none">No cappers below 40% win rate with 5+ graded picks yet.</p>
+    <div class="grid" id="cold-grid"></div>
+    <p class="empty" id="cold-empty" style="display:none">No cappers below 40% with 2+ graded picks yet.</p>
   </div>
 
   <hr class="divider">
 
-  <!-- FAVORITES -->
   <div class="section">
-    <div class="section-header">
-      <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-      </svg>
-      <span class="section-title">My favorites</span>
-      <span class="section-count" id="fav-count">0</span>
+    <div class="sec-hdr">
+      <span style="font-size:16px">⭐</span>
+      <span class="sec-title">My favorites</span>
+      <span class="sec-badge" id="fav-badge">0</span>
     </div>
-    <div class="card-grid" id="fav-grid"></div>
-    <p class="empty-state" id="fav-empty">Tap the star on any capper to pin them here.</p>
+    <div class="grid" id="fav-grid"></div>
+    <p class="empty" id="fav-empty">Tap the star on any capper to pin them here.</p>
   </div>
 
 </div>
-
 <script>
-/* ─────────────────────────────────────────────
-   CONFIG — replace with your actual Sheet ID
-   Found in your sheet URL:
-   docs.google.com/spreadsheets/d/THIS_PART/edit
-   Sheet must be shared: "Anyone with the link can view"
-───────────────────────────────────────────── */
-const CONFIG = {
-  SHEET_ID: "1NMSGufsCfJYSbEeKp1Zwdgws1UeqY9XxIKQoR6mf3Fg",
-  HOT_MIN_PCT: 55,
-  COLD_MAX_PCT: 40,
-  MIN_DECIDED: 0,
-  REFRESH_INTERVAL_MS: 5 * 60 * 1000,
-};
+// ─── CONFIG ──────────────────────────────────────────────
+// Paste your Sheet ID below (the long string from your sheet URL)
+const SHEET_ID = "1NMSGufsCfJYSbEeKp1Zwdgws1UeqY9XxIKQoR6mf3Fg ";
+const HOT_PCT  = 55;
+const COLD_PCT = 40;
+const MIN_DEC  = 2;   // minimum graded (W or L) picks to appear in hot/cold
+// ─────────────────────────────────────────────────────────
 
-/* ── FAVORITES (localStorage) ── */
-const FAV_KEY = "capper_intel_favorites";
-const favorites = new Set(JSON.parse(localStorage.getItem(FAV_KEY) || "[]"));
+const FAV_KEY = "ci_favs";
+const favs = new Set(JSON.parse(localStorage.getItem(FAV_KEY) || "[]"));
+const saveFavs = () => localStorage.setItem(FAV_KEY, JSON.stringify([...favs]));
 
-function saveFavs() {
-  localStorage.setItem(FAV_KEY, JSON.stringify([...favorites]));
+function banner(msg, type) {
+  const el = document.getElementById("banner");
+  el.textContent = msg;
+  el.className = "banner " + (type || "info");
 }
 
-function toggleFav(name) {
-  favorites.has(name) ? favorites.delete(name) : favorites.add(name);
-  saveFavs();
-  refresh();
-}
-
-/* ── FETCH + PARSE GOOGLE SHEET ── */
-async function fetchPicks() {
-  const url = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json&sheet=Picks&headers=1`;
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`Could not reach the sheet (HTTP ${resp.status})`);
-  const text = await resp.text();
-  const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
-  if (!match) throw new Error("Unexpected response — is the Sheet ID correct?");
-  const data = JSON.parse(match[1]);
-  if (data.status !== "ok") {
-    throw new Error('Sheet not accessible. Go to Google Sheets → Share → "Anyone with the link can view".');
-  }
-  const cols = data.table.cols.map(c => (c.label || "").toLowerCase().replace(/\s+/g, "_"));
-  return (data.table.rows || [])
-    .filter(row => row && row.c)
-    .map(row => {
-      const obj = {};
-      row.c.forEach((cell, i) => { if (cols[i]) obj[cols[i]] = cell?.v ?? ""; });
-      return obj;
-    });
-}
-
-/* ── COMPUTE CAPPER STATS FOR CURRENT MONTH ── */
-function computeStats(picks) {
-  const now = new Date();
-  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
-  const map = {};
-  for (const p of picks) {
-    const dateStr = String(p.date_utc || "");
-    if (!dateStr.startsWith(thisMonth)) continue;
-    const name = String(p.capper || "").trim();
-    if (!name) continue;
-    if (!map[name]) map[name] = { name, sport: "", w: 0, l: 0, push: 0, pending: 0 };
-    const r = String(p.result || "").trim();
-    if (r === "W") map[name].w++;
-    else if (r === "L") map[name].l++;
-    else if (r.toLowerCase() === "push") map[name].push++;
-    else map[name].pending++;
-    if (p.sport) map[name].sport = String(p.sport).trim();
-  }
-  return Object.values(map).map(c => {
-    const decided = c.w + c.l;
-    const total   = decided + c.push + c.pending;
-    const pct     = decided > 0 ? Math.round(c.w / decided * 100) : null;
-    return { ...c, decided, total, pct };
+async function fetchData() {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Picks&headers=1`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Sheet returned ${r.status}. Make sure it is shared to "Anyone with the link can view" in Google Sheets.`);
+  const txt = await r.text();
+  const m = txt.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+  if (!m) throw new Error("Could not parse sheet response.");
+  const d = JSON.parse(m[1]);
+  if (d.status !== "ok") throw new Error("Sheet access denied. Share the sheet as Viewer to Anyone with the link.");
+  const cols = d.table.cols.map(c => (c.label || "").toLowerCase().replace(/\s+/g, "_"));
+  return (d.table.rows || []).filter(r => r && r.c).map(r => {
+    const o = {};
+    r.c.forEach((c, i) => { if (cols[i]) o[cols[i]] = c?.v ?? ""; });
+    return o;
   });
 }
 
-/* ── STAR SVG ── */
-function starSVG(filled) {
-  return filled
-    ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="#F59E0B" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
-    : `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#64748B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+function monthKey() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}`;
 }
 
-/* ── BUILD CAPPER CARD HTML ── */
-function buildCard(c) {
-  const isFav   = favorites.has(c.name);
-  const total   = c.total || 1;
-  const wFlex   = c.w;
-  const lFlex   = c.l;
-  const pFlex   = c.push;
-  const pendFlex= c.pending;
-  const pctClass = c.pct === null ? "pct-none" : c.pct >= CONFIG.HOT_MIN_PCT ? "pct-hot" : c.pct <= CONFIG.COLD_MAX_PCT ? "pct-cold" : "pct-mid";
-  const pctText  = c.pct !== null ? `${c.pct}% win rate` : "Awaiting results";
-  const record   = `${c.w}W · ${c.l}L${c.push > 0 ? ` · ${c.push}P` : ""}${c.pending > 0 ? ` · ${c.pending} pending` : ""}`;
-  const sport    = c.sport || "—";
-  const nameId   = c.name.replace(/[^a-zA-Z0-9]/g, "_");
-  return `
-  <div class="cap-card">
-    <div class="cap-top">
-      <div class="cap-info">
-        <p class="cap-name" title="${c.name}">${c.name}</p>
-        <span class="sport-pill">${sport}</span>
-      </div>
-      <button class="star-btn" onclick="toggleFav('${c.name.replace(/'/g,"\\'")}')
-" aria-label="${isFav ? "Unstar" : "Star"} ${c.name}">
-        ${starSVG(isFav)}
-      </button>
-    </div>
-    <p class="cap-record mono">${record}</p>
-    <div class="win-bar">
-      ${c.w       > 0 ? `<div class="bar-w"    style="flex:${c.w}"></div>` : ""}
-      ${c.l       > 0 ? `<div class="bar-l"    style="flex:${c.l}"></div>` : ""}
-      ${c.push    > 0 ? `<div class="bar-p"    style="flex:${c.push}"></div>` : ""}
-      ${c.pending > 0 ? `<div class="bar-pend" style="flex:${c.pending}"></div>` : ""}
-    </div>
-    <p class="win-pct ${pctClass}">${pctText}</p>
-  </div>`;
-}
-
-/* ── RENDER ── */
-function renderSection(gridId, emptyId, countId, cappers) {
-  const grid  = document.getElementById(gridId);
-  const empty = document.getElementById(emptyId);
-  const count = document.getElementById(countId);
-  count.textContent = cappers.length;
-  if (cappers.length === 0) {
-    grid.innerHTML  = "";
-    empty.style.display = "";
-  } else {
-    grid.innerHTML  = cappers.map(buildCard).join("");
-    empty.style.display = "none";
+function buildStats(rows) {
+  const mk = monthKey();
+  const map = {};
+  for (const r of rows) {
+    const d = String(r.date_utc || "").slice(0,7);
+    if (d !== mk) continue;
+    const name = String(r.capper || "").trim();
+    if (!name) continue;
+    if (!map[name]) map[name] = {name, sport: String(r.sport || "").trim(), w:0, l:0, push:0, pend:0};
+    const res = String(r.result || "").trim();
+    if (res === "W") map[name].w++;
+    else if (res === "L") map[name].l++;
+    else if (res.toLowerCase() === "push") map[name].push++;
+    else map[name].pend++;
+    if (r.sport) map[name].sport = String(r.sport).trim();
   }
+  return Object.values(map).map(c => {
+    const dec = c.w + c.l;
+    const tot = dec + c.push + c.pend;
+    const pct = dec > 0 ? Math.round(c.w / dec * 100) : null;
+    return {...c, dec, tot, pct};
+  });
 }
 
-let allCappers = [];
-
-function renderAll() {
-  const now  = new Date();
-  const month = now.toLocaleString("default", { month: "long", year: "numeric" });
-  document.getElementById("month-label").textContent = month;
-
-  const totalPicks  = allCappers.reduce((s, c) => s + c.total, 0);
-  const totalW      = allCappers.reduce((s, c) => s + c.w, 0);
-  const totalL      = allCappers.reduce((s, c) => s + c.l, 0);
-  const overallPct  = totalW + totalL > 0 ? Math.round(totalW / (totalW + totalL) * 100) : 0;
-  document.getElementById("m-picks").textContent   = totalPicks;
-  document.getElementById("m-winrate").textContent = totalW + totalL > 0 ? overallPct + "%" : "—";
-  document.getElementById("m-cappers").textContent = allCappers.length;
-
-  const hot  = allCappers
-    .filter(c => c.pct !== null && c.decided >= CONFIG.MIN_DECIDED && c.pct >= CONFIG.HOT_MIN_PCT)
-    .sort((a, b) => b.pct - a.pct).slice(0, 6);
-  const cold = allCappers
-    .filter(c => c.pct !== null && c.decided >= CONFIG.MIN_DECIDED && c.pct <= CONFIG.COLD_MAX_PCT)
-    .sort((a, b) => a.pct - b.pct).slice(0, 6);
-  const favs = allCappers.filter(c => favorites.has(c.name))
-    .sort((a, b) => (b.pct ?? -1) - (a.pct ?? -1));
-
-  renderSection("hot-grid",  "hot-empty",  "hot-count",  hot);
-  renderSection("cold-grid", "cold-empty", "cold-count", cold);
-  renderSection("fav-grid",  "fav-empty",  "fav-count",  favs);
+function pctClass(p) {
+  if (p === null) return "none-pct";
+  if (p >= HOT_PCT) return "hot-pct";
+  if (p <= COLD_PCT) return "cold-pct";
+  return "mid-pct";
 }
 
-/* ── REFRESH ── */
-async function refresh() {
-  const banner = document.getElementById("status-banner");
-  const btn    = document.getElementById("refresh-btn");
-  btn.disabled = true;
-  banner.className = "status-banner";
-  banner.style.display = "none";
+function makeCard(c) {
+  const isFav = favs.has(c.name);
+  const tot = c.tot || 1;
+  const rec = `${c.w}W · ${c.l}L${c.push > 0 ? ` · ${c.push}P` : ""}${c.pend > 0 ? ` · ${c.pend} pending` : ""}`;
+  const pctTxt = c.pct !== null ? `${c.pct}% win rate` : "No results yet";
+  const sp = c.sport || "—";
+  const safeName = c.name.replace(/'/g, "\\'");
+  return `
+<div class="card">
+  <div class="card-top">
+    <div style="flex:1;min-width:0">
+      <p class="capper-name" title="${c.name}">${c.name}</p>
+      <span class="sport">${sp}</span>
+    </div>
+    <button class="star" onclick="toggleFav('${safeName}')" aria-label="${isFav?"Unstar":"Star"} ${c.name}">
+      ${isFav ? "⭐" : "☆"}
+    </button>
+  </div>
+  <p class="record">${rec}</p>
+  <div class="bar">
+    ${c.w    > 0 ? `<div class="bar-w" style="flex:${c.w}"></div>` : ""}
+    ${c.l    > 0 ? `<div class="bar-l" style="flex:${c.l}"></div>` : ""}
+    ${c.push > 0 ? `<div class="bar-p" style="flex:${c.push}"></div>` : ""}
+    ${c.pend > 0 ? `<div class="bar-u" style="flex:${c.pend}"></div>` : ""}
+  </div>
+  <p class="pct ${pctClass(c.pct)}">${pctTxt}</p>
+</div>`;
+}
 
-  if (CONFIG.SHEET_ID === "1NMSGufsCfJYSbEeKp1Zwdgws1UeqY9XxIKQoR6mf3Fg") {
-    banner.className = "status-banner error";
-    banner.textContent = "⚠ Open dashboard.html and set your SHEET_ID in the CONFIG at the top of the script.";
-    btn.disabled = false;
+function fill(gridId, emptyId, badgeId, caps) {
+  document.getElementById(gridId).innerHTML  = caps.map(makeCard).join("");
+  document.getElementById(emptyId).style.display = caps.length ? "none" : "";
+  document.getElementById(badgeId).textContent = caps.length;
+}
+
+let allCaps = [];
+
+function render() {
+  const n = new Date();
+  document.getElementById("hdr-month").textContent = n.toLocaleString("default",{month:"long",year:"numeric"});
+  document.getElementById("hdr-updated").textContent = `Updated ${n.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`;
+
+  const tw = allCaps.reduce((s,c)=>s+c.w,0);
+  const tl = allCaps.reduce((s,c)=>s+c.l,0);
+  document.getElementById("m-total").textContent = allCaps.reduce((s,c)=>s+c.tot,0);
+  document.getElementById("m-wr").textContent    = tw+tl > 0 ? Math.round(tw/(tw+tl)*100)+"%" : "—";
+  document.getElementById("m-cap").textContent   = allCaps.length;
+
+  const hot  = allCaps.filter(c=>c.pct!==null && c.dec>=MIN_DEC && c.pct>=HOT_PCT).sort((a,b)=>b.pct-a.pct).slice(0,6);
+  const cold = allCaps.filter(c=>c.pct!==null && c.dec>=MIN_DEC && c.pct<=COLD_PCT).sort((a,b)=>a.pct-b.pct).slice(0,6);
+  const fav  = allCaps.filter(c=>favs.has(c.name)).sort((a,b)=>(b.pct??-1)-(a.pct??-1));
+
+  fill("hot-grid",  "hot-empty",  "hot-badge",  hot);
+  fill("cold-grid", "cold-empty", "cold-badge", cold);
+  fill("fav-grid",  "fav-empty",  "fav-badge",  fav);
+}
+
+function toggleFav(name) {
+  favs.has(name) ? favs.delete(name) : favs.add(name);
+  saveFavs();
+  render();
+}
+
+async function load() {
+  if (SHEET_ID === "1NMSGufsCfJYSbEeKp1Zwdgws1UeqY9XxIKQoR6mf3Fg") {
+    banner("Open dashboard.html and replace YOUR_SHEET_ID_HERE with your actual Google Sheet ID.", "err");
     return;
   }
-
+  banner("Connecting to sheet...", "info");
   try {
-    const picks  = await fetchPicks();
-    allCappers   = computeStats(picks);
-    renderAll();
-    const t = new Date();
-    document.getElementById("last-updated").textContent = `Updated ${t.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}`;
-  } catch (err) {
-    banner.className = "status-banner error";
-    banner.textContent = "⚠ " + err.message;
-    console.error(err);
+    const rows = await fetchData();
+    allCaps = buildStats(rows);
+    render();
+    banner(`Loaded ${rows.length} picks across ${allCaps.length} cappers.`, "ok");
+    setTimeout(() => { document.getElementById("banner").style.display = "none"; }, 3000);
+  } catch(e) {
+    banner("Error: " + e.message, "err");
+    console.error(e);
   }
-  btn.disabled = false;
 }
 
-/* ── INIT ── */
-refresh();
-setInterval(refresh, CONFIG.REFRESH_INTERVAL_MS);
+load();
+setInterval(load, 5 * 60 * 1000);
 </script>
 </body>
 </html>
