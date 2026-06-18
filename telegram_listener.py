@@ -56,6 +56,10 @@ CHANNEL_CONTEXT = {
         "at the start of each post. Extract the comment as the name. "
         "Do NOT use the channel name as the capper."
     )
+    -1001858676502: (
+        "one capper only. his name is "Life's a Gamble"."
+        "not every post of his is a bet. some are recaps (use the green check emoji), some are looking ahead to the match. (no betting terms present)"
+    )
 }
 
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
