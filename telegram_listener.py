@@ -2,7 +2,7 @@
 Telegram Picks Listener
 ------------------------
 Polls Telegram channels for new messages, extracts bet info via Claude Haiku,
-and writes rows to Google Sheets. Runs on GitHub Actions cron schedule.
+filters out recaps/promos, deduplicates across channels, and writes to Google Sheets.
 """
 
 import os
@@ -29,7 +29,7 @@ CHANNELS = [
     -1003641992899,            # MONEYCAPPERSFREE
     -1003641018140,            # EXCLUSIVE PLAYS
     -1002077943194,            # CAPPERS FREE 🎰
-    #-1001858676502,            # Life’s a Gamble 🎲
+    -1001858676502,            # Life’s a Gamble 🎲
 ]
 
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
@@ -41,13 +41,15 @@ EXTRACTION_PROMPT = """You are reading a message from a Telegram sports betting 
 Channels post in different styles: sometimes plain text where the capper's name
 appears as a leading hashtag (e.g. "#JohnnyBets Lakers -4.5 -110 2u"), and
 sometimes an image of a bet slip with a short text caption that names the capper.
-Figure out which style applies to this particular message and extract accordingly.
 
-Identify every distinct bet mentioned. Respond with ONLY a JSON array (no
-markdown fences, no explanation) where each item has exactly this shape:
+For each message, classify it and extract any bets found.
+
+Respond with ONLY a JSON array (no markdown fences, no explanation).
+Each item must have exactly this shape:
 
 [
   {
+    "pick_status": "new_pick" | "result" | "recap" | "promo",
     "capper": string or null,
     "sport": string or null,
     "matchup": string or null,
@@ -59,7 +61,14 @@ markdown fences, no explanation) where each item has exactly this shape:
   }
 ]
 
-If you cannot find any bet information at all, respond with []."""
+pick_status rules:
+- "new_pick": a fresh bet being posted for the first time, game hasn't started yet
+- "result": reporting the outcome of a past bet (contains ✅ ❌, "won", "lost", "hit", final scores, W/L records)
+- "recap": summarising recent performance across multiple picks
+- "promo": advertisement, invite link, or call to join a VIP/premium channel
+
+If no bet information at all, respond with [].
+If a message mixes new picks and results (e.g. yesterday's result + today's pick), return separate objects for each."""
 
 # ----------------------------------------------------------------------
 # Google Sheets helpers
@@ -101,6 +110,28 @@ def save_state(ws, channel, message_id):
     ws.append_row([str(channel), message_id])
 
 
+def load_existing_picks(ws):
+    """
+    Returns two sets for deduplication:
+    - seen_messages: (channel, message_id) — prevents writing same message twice
+    - seen_picks: (capper, date_only, selection) — prevents cross-channel duplicates
+    """
+    seen_messages = set()
+    seen_picks = set()
+    rows = ws.get_all_records()
+    for r in rows:
+        ch = str(r.get("channel", "")).strip()
+        mid = str(r.get("message_id", "")).strip()
+        if ch and mid:
+            seen_messages.add((ch, mid))
+        capper = str(r.get("capper", "")).lower().strip()
+        selection = str(r.get("selection", "")).lower().strip()
+        date_only = str(r.get("date_utc", ""))[:10]
+        if capper and selection and date_only:
+            seen_picks.add((capper, date_only, selection))
+    return seen_messages, seen_picks
+
+
 # ----------------------------------------------------------------------
 # Claude extraction
 # ----------------------------------------------------------------------
@@ -136,12 +167,13 @@ def extract_bets(claude_client, text, image_bytes, msg_id):
             messages=[{"role": "user", "content": content}],
         )
         raw = response.content[0].text.strip()
-        print(f"  [msg {msg_id}] Claude: {raw[:200]}")
         raw = re.sub(r"^```(json)?|```$", "", raw, flags=re.MULTILINE).strip()
         bets = json.loads(raw)
         result = bets if isinstance(bets, list) else []
-        print(f"  [msg {msg_id}] {len(result)} bet(s) extracted")
-        return result
+        new_picks = [b for b in result if b.get("pick_status") == "new_pick"]
+        skipped = len(result) - len(new_picks)
+        print(f"  [msg {msg_id}] {len(new_picks)} new pick(s), {skipped} recap/result/promo skipped")
+        return new_picks
 
     except Exception as e:
         print(f"  [msg {msg_id}] ERROR: {str(e)[:200]}")
@@ -168,7 +200,10 @@ def main():
         "bet_type", "selection", "odds", "units_or_confidence", "notes",
         "message_link", "result",
     ])
+
     state = load_state(state_ws)
+    seen_messages, seen_picks = load_existing_picks(picks_ws)
+    print(f"Loaded {len(seen_messages)} existing message IDs, {len(seen_picks)} existing picks for dedup")
 
     with tg_client:
         for channel in CHANNELS:
@@ -194,6 +229,13 @@ def main():
 
             for msg in messages:
                 newest_id = max(newest_id, msg.id)
+
+                # Skip if we already wrote rows for this exact message
+                msg_key = (str(channel), str(msg.id))
+                if msg_key in seen_messages:
+                    print(f"  [msg {msg.id}] already processed, skipping")
+                    continue
+
                 try:
                     text = msg.text or ""
                     image_bytes = None
@@ -208,18 +250,29 @@ def main():
 
                     bets = extract_bets(claude_client, text, image_bytes, msg.id)
 
-                    if bets:
-                        link = f"https://t.me/{channel}/{msg.id}"
+                    for bet in bets:
+                        # Cross-channel duplicate check
                         date_str = msg.date.strftime("%Y-%m-%d %H:%M UTC")
-                        for bet in bets:
-                            picks_ws.append_row([
-                                date_str, str(channel), msg.id,
-                                bet.get("capper"), bet.get("sport"), bet.get("matchup"),
-                                bet.get("bet_type"), bet.get("selection"), bet.get("odds"),
-                                bet.get("units_or_confidence"), bet.get("notes"),
-                                link, "",
-                            ])
-                            print(f"  [msg {msg.id}] ROW: {bet.get('capper')} | {bet.get('matchup')} | {bet.get('selection')}")
+                        date_only = date_str[:10]
+                        capper_key = str(bet.get("capper") or "").lower().strip()
+                        selection_key = str(bet.get("selection") or "").lower().strip()
+                        pick_key = (capper_key, date_only, selection_key)
+
+                        if pick_key in seen_picks and capper_key and selection_key:
+                            print(f"  [msg {msg.id}] DUPE skipped: {bet.get('capper')} | {bet.get('selection')}")
+                            continue
+
+                        link = f"https://t.me/{channel}/{msg.id}"
+                        picks_ws.append_row([
+                            date_str, str(channel), msg.id,
+                            bet.get("capper"), bet.get("sport"), bet.get("matchup"),
+                            bet.get("bet_type"), bet.get("selection"), bet.get("odds"),
+                            bet.get("units_or_confidence"), bet.get("notes"),
+                            link, "",
+                        ])
+                        seen_picks.add(pick_key)
+                        seen_messages.add(msg_key)
+                        print(f"  [msg {msg.id}] ROW: {bet.get('capper')} | {bet.get('matchup')} | {bet.get('selection')}")
 
                 except Exception as e:
                     print(f"  [msg {msg.id}] ERROR: {e}")
