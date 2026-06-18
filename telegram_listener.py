@@ -33,12 +33,12 @@ CHANNELS = [
     -1001858676502,            # Life’s a Gamble 🎲
 ]
 
-GEMINI_MODEL = "gemini-1.5-flash"   # better free tier support than 2.0-flash
+GEMINI_MODEL = "gemini-2.0-flash"
 FIRST_RUN_BACKFILL = 15
 PICKS_TAB = "Picks"
 STATE_TAB = "_state"
-SECONDS_BETWEEN_CALLS = 5    # pause between Gemini calls to stay under rate limit
-MAX_RETRIES = 3              # retry on 429 before giving up on a message
+SECONDS_BETWEEN_CALLS = 5   # 5s gap = 12 RPM, safely under the 15 RPM free tier limit
+MAX_RETRIES = 3
 
 EXTRACTION_PROMPT = """You are reading a message from a Telegram sports betting channel.
 Channels post in different styles: sometimes plain text where the capper's name
@@ -105,7 +105,7 @@ def save_state(ws, channel, message_id):
 
 
 # ----------------------------------------------------------------------
-# Gemini extraction with retry + rate limiting
+# Gemini extraction
 # ----------------------------------------------------------------------
 
 def extract_bets(gemini_client, text, image_bytes, msg_id):
@@ -139,11 +139,11 @@ def extract_bets(gemini_client, text, image_bytes, msg_id):
         except Exception as e:
             err = str(e)
             if "429" in err or "RESOURCE_EXHAUSTED" in err:
-                wait = 15 * attempt   # 15s, 30s, 45s
+                wait = 20 * attempt
                 print(f"  [msg {msg_id}] rate limited, waiting {wait}s (attempt {attempt}/{MAX_RETRIES})")
                 time.sleep(wait)
             else:
-                print(f"  [msg {msg_id}] ERROR: {err[:200]}")
+                print(f"  [msg {msg_id}] ERROR: {err[:300]}")
                 return []
 
     print(f"  [msg {msg_id}] gave up after {MAX_RETRIES} retries")
@@ -221,9 +221,8 @@ def main():
                                 bet.get("units_or_confidence"), bet.get("notes"),
                                 link, "",
                             ])
-                            print(f"  [msg {msg.id}] ROW WRITTEN: {bet.get('capper')} | {bet.get('matchup')} | {bet.get('selection')}")
+                            print(f"  [msg {msg.id}] ROW: {bet.get('capper')} | {bet.get('matchup')} | {bet.get('selection')}")
 
-                    # Pause between every Gemini call to respect rate limits
                     time.sleep(SECONDS_BETWEEN_CALLS)
 
                 except Exception as e:
