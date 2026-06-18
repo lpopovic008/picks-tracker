@@ -1,14 +1,14 @@
 """
 Telegram Picks Listener
 ------------------------
-Polls Telegram channels for new messages, extracts bet info via Gemini,
+Polls Telegram channels for new messages, extracts bet info via Claude Haiku,
 and writes rows to Google Sheets. Runs on GitHub Actions cron schedule.
 """
 
 import os
 import re
 import json
-import time
+import base64
 from io import BytesIO
 
 from telethon.sync import TelegramClient
@@ -17,8 +17,7 @@ from telethon.sessions import StringSession
 import gspread
 from google.oauth2.service_account import Credentials
 
-from google import genai
-from google.genai import types
+import anthropic
 
 # ----------------------------------------------------------------------
 # Config
@@ -33,12 +32,10 @@ CHANNELS = [
     -1001858676502,            # Life’s a Gamble 🎲
 ]
 
-GEMINI_MODEL = "gemini-2.0-flash"
+CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 FIRST_RUN_BACKFILL = 15
 PICKS_TAB = "Picks"
 STATE_TAB = "_state"
-SECONDS_BETWEEN_CALLS = 5   # 5s gap = 12 RPM, safely under the 15 RPM free tier limit
-MAX_RETRIES = 3
 
 EXTRACTION_PROMPT = """You are reading a message from a Telegram sports betting channel.
 Channels post in different styles: sometimes plain text where the capper's name
@@ -105,49 +102,50 @@ def save_state(ws, channel, message_id):
 
 
 # ----------------------------------------------------------------------
-# Gemini extraction
+# Claude extraction
 # ----------------------------------------------------------------------
 
-def extract_bets(gemini_client, text, image_bytes, msg_id):
-    parts = []
+def extract_bets(claude_client, text, image_bytes, msg_id):
+    content = []
 
     if image_bytes:
-        parts.append(types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"))
+        content.append({
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": "image/jpeg",
+                "data": base64.b64encode(image_bytes).decode("utf-8"),
+            },
+        })
         print(f"  [msg {msg_id}] image ({len(image_bytes)} bytes) + text")
     else:
         print(f"  [msg {msg_id}] text only")
 
     print(f"  [msg {msg_id}] preview: {repr((text or '')[:120])}")
 
-    full_prompt = f"{EXTRACTION_PROMPT}\n\nMessage text/caption:\n{text or '(none)'}"
-    parts.append(full_prompt)
+    content.append({
+        "type": "text",
+        "text": f"Message text/caption:\n{text or '(none)'}"
+    })
 
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            response = gemini_client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=parts,
-            )
-            raw = response.text.strip()
-            print(f"  [msg {msg_id}] Gemini: {raw[:200]}")
-            raw = re.sub(r"^```(json)?|```$", "", raw, flags=re.MULTILINE).strip()
-            bets = json.loads(raw)
-            result = bets if isinstance(bets, list) else []
-            print(f"  [msg {msg_id}] {len(result)} bet(s) extracted")
-            return result
+    try:
+        response = claude_client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=1000,
+            system=EXTRACTION_PROMPT,
+            messages=[{"role": "user", "content": content}],
+        )
+        raw = response.content[0].text.strip()
+        print(f"  [msg {msg_id}] Claude: {raw[:200]}")
+        raw = re.sub(r"^```(json)?|```$", "", raw, flags=re.MULTILINE).strip()
+        bets = json.loads(raw)
+        result = bets if isinstance(bets, list) else []
+        print(f"  [msg {msg_id}] {len(result)} bet(s) extracted")
+        return result
 
-        except Exception as e:
-            err = str(e)
-            if "429" in err or "RESOURCE_EXHAUSTED" in err:
-                wait = 20 * attempt
-                print(f"  [msg {msg_id}] rate limited, waiting {wait}s (attempt {attempt}/{MAX_RETRIES})")
-                time.sleep(wait)
-            else:
-                print(f"  [msg {msg_id}] ERROR: {err[:300]}")
-                return []
-
-    print(f"  [msg {msg_id}] gave up after {MAX_RETRIES} retries")
-    return []
+    except Exception as e:
+        print(f"  [msg {msg_id}] ERROR: {str(e)[:200]}")
+        return []
 
 
 # ----------------------------------------------------------------------
@@ -155,7 +153,7 @@ def extract_bets(gemini_client, text, image_bytes, msg_id):
 # ----------------------------------------------------------------------
 
 def main():
-    gemini_client = genai.Client(api_key=os.environ["ANTHROPIC_API_KEY"])
+    claude_client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
     tg_client = TelegramClient(
         StringSession(os.environ["TELEGRAM_SESSION"]),
@@ -208,7 +206,7 @@ def main():
                         print(f"  [msg {msg.id}] no text or photo, skipping")
                         continue
 
-                    bets = extract_bets(gemini_client, text, image_bytes, msg.id)
+                    bets = extract_bets(claude_client, text, image_bytes, msg.id)
 
                     if bets:
                         link = f"https://t.me/{channel}/{msg.id}"
@@ -222,8 +220,6 @@ def main():
                                 link, "",
                             ])
                             print(f"  [msg {msg.id}] ROW: {bet.get('capper')} | {bet.get('matchup')} | {bet.get('selection')}")
-
-                    time.sleep(SECONDS_BETWEEN_CALLS)
 
                 except Exception as e:
                     print(f"  [msg {msg.id}] ERROR: {e}")
