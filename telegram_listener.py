@@ -155,7 +155,7 @@ def extract_bets(gemini_client, text, image_bytes, msg_id):
 # ----------------------------------------------------------------------
 
 def main():
-    gemini_client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    gemini_client = genai.Client(api_key=os.environ["ANTHROPIC_API_KEY"])
 
     tg_client = TelegramClient(
         StringSession(os.environ["TELEGRAM_SESSION"]),
