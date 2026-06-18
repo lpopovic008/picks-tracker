@@ -28,7 +28,7 @@ CHANNELS = [
     -1003984449468,            # CapperSync
     -1003641992899,            # MONEYCAPPERSFREE
     -1003641018140,            # EXCLUSIVE PLAYS
-    -1002077943194,            # CAPPERS FREE 🎰
+    -1003641018140,            # CAPPERS FREE 🎰
     -1001858676502,            # Life’s a Gamble 🎲
 ]
 
@@ -41,18 +41,21 @@ CHANNELS = [
 # Value = plain-English description of the channel's posting format
 # ------------------------------------------------------------------
 CHANNEL_CONTEXT = {
-    "channel_username_one": (
+    "betting-intel": (
         "Aggregator channel. Each post covers a different capper. "
-        "The capper name appears at the very start of the message text or image caption "
+        "The capper name appears at the very start of the message text or image caption or in the image itself."
         "before the pick details. Do NOT use the channel name as the capper."
     ),
-    -1001234567890: (
+    -1003984449468: (
         "Aggregator channel. Capper names appear as hashtags like #HammeringHank "
         "at the start of each post. Extract the word after # as the capper name. "
         "Do NOT use the channel name as the capper."
     ),
-    # Single-capper channel example:
-    # "johnnybets_official": "Single capper channel. Every post is from 'JohnnyBets'.",
+    -1003641018140: (
+        "Aggregator channel. Capper names appear as comments to the post"
+        "at the start of each post. Extract the comment as the name. "
+        "Do NOT use the channel name as the capper."
+    )
 }
 
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
