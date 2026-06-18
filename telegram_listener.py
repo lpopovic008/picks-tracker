@@ -22,16 +22,16 @@ from telethon.sessions import StringSession
 import gspread
 from google.oauth2.service_account import Credentials
 
-import google.generativeai as genai
-import PIL.Image
+from google import genai
+from google.genai import types
 
 # ----------------------------------------------------------------------
-# Config — edit this part
+# Config — edit this section with your actual channel usernames
 # ----------------------------------------------------------------------
 
 CHANNELS = [
-    "CappersSync",   # public channel username, no "@"
-    "cappersfree",   # for a private channel with no username, use its numeric ID instead (see SETUP.md)
+    "CappersSync",   # @username without the @ symbol
+    "cappersfree",   # for private channels use the numeric ID as an integer e.g. -1001234567890
 ]
 
 GEMINI_MODEL = "gemini-2.0-flash"
@@ -97,27 +97,30 @@ def load_state(ws):
 def save_state(ws, channel, message_id):
     values = ws.get_all_values()
     for i, row in enumerate(values):
-        if row and row[0] == channel:
+        if row and row[0] == str(channel):
             ws.update_cell(i + 1, 2, message_id)
             return
-    ws.append_row([channel, message_id])
+    ws.append_row([str(channel), message_id])
 
 
 # ----------------------------------------------------------------------
 # Gemini extraction
 # ----------------------------------------------------------------------
 
-def extract_bets(model, text, image_bytes):
+def extract_bets(gemini_client, text, image_bytes):
     parts = []
 
     if image_bytes:
-        image = PIL.Image.open(BytesIO(image_bytes))
-        parts.append(image)
+        parts.append(types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"))
 
     full_prompt = f"{EXTRACTION_PROMPT}\n\nMessage text/caption:\n{text or '(none)'}"
     parts.append(full_prompt)
 
-    response = model.generate_content(parts)
+    response = gemini_client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=parts,
+    )
+
     raw = response.text.strip()
     raw = re.sub(r"^```(json)?|```$", "", raw, flags=re.MULTILINE).strip()
 
@@ -134,8 +137,7 @@ def extract_bets(model, text, image_bytes):
 # ----------------------------------------------------------------------
 
 def main():
-    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    gemini_model = genai.GenerativeModel(GEMINI_MODEL)
+    gemini_client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
     tg_client = TelegramClient(
         StringSession(os.environ["TELEGRAM_SESSION"]),
@@ -181,7 +183,7 @@ def main():
                     if not text and not image_bytes:
                         continue
 
-                    bets = extract_bets(gemini_model, text, image_bytes)
+                    bets = extract_bets(gemini_client, text, image_bytes)
                     if not bets:
                         continue
 
