@@ -1,14 +1,14 @@
 """
 Telegram Picks Listener
 ------------------------
-Polls a list of Telegram channels for new messages, sends each new message
-(plus any attached image) to Google Gemini to extract structured bet info,
-and appends the result as a row in a Google Sheet.
+Polls Telegram channels for new messages, extracts bet info via Gemini,
+and writes rows to Google Sheets. Runs on GitHub Actions cron schedule.
 """
 
 import os
 import re
 import json
+import time
 from io import BytesIO
 
 from telethon.sync import TelegramClient
@@ -21,11 +21,11 @@ from google import genai
 from google.genai import types
 
 # ----------------------------------------------------------------------
-# Config — use @usernames for public channels, numeric IDs for private
+# Config
 # ----------------------------------------------------------------------
 
 CHANNELS = [
-    "betting_intel",           # public: username without @
+    "betting_intel",           # public: username without @, private: -1001234567890
     -1003984449468,            # CapperSync
     -1003641992899,            # MONEYCAPPERSFREE
     -1003641018140,            # EXCLUSIVE PLAYS
@@ -33,10 +33,12 @@ CHANNELS = [
     -1001858676502,            # Life’s a Gamble 🎲
 ]
 
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = "gemini-1.5-flash"   # better free tier support than 2.0-flash
 FIRST_RUN_BACKFILL = 15
 PICKS_TAB = "Picks"
 STATE_TAB = "_state"
+SECONDS_BETWEEN_CALLS = 5    # pause between Gemini calls to stay under rate limit
+MAX_RETRIES = 3              # retry on 429 before giving up on a message
 
 EXTRACTION_PROMPT = """You are reading a message from a Telegram sports betting channel.
 Channels post in different styles: sometimes plain text where the capper's name
@@ -103,7 +105,7 @@ def save_state(ws, channel, message_id):
 
 
 # ----------------------------------------------------------------------
-# Gemini extraction
+# Gemini extraction with retry + rate limiting
 # ----------------------------------------------------------------------
 
 def extract_bets(gemini_client, text, image_bytes, msg_id):
@@ -111,33 +113,41 @@ def extract_bets(gemini_client, text, image_bytes, msg_id):
 
     if image_bytes:
         parts.append(types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"))
-        print(f"  [msg {msg_id}] sending image + text to Gemini")
+        print(f"  [msg {msg_id}] image ({len(image_bytes)} bytes) + text")
     else:
-        print(f"  [msg {msg_id}] sending text-only to Gemini")
+        print(f"  [msg {msg_id}] text only")
 
-    print(f"  [msg {msg_id}] text preview: {repr((text or '')[:120])}")
+    print(f"  [msg {msg_id}] preview: {repr((text or '')[:120])}")
 
     full_prompt = f"{EXTRACTION_PROMPT}\n\nMessage text/caption:\n{text or '(none)'}"
     parts.append(full_prompt)
 
-    response = gemini_client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=parts,
-    )
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            response = gemini_client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=parts,
+            )
+            raw = response.text.strip()
+            print(f"  [msg {msg_id}] Gemini: {raw[:200]}")
+            raw = re.sub(r"^```(json)?|```$", "", raw, flags=re.MULTILINE).strip()
+            bets = json.loads(raw)
+            result = bets if isinstance(bets, list) else []
+            print(f"  [msg {msg_id}] {len(result)} bet(s) extracted")
+            return result
 
-    raw = response.text.strip()
-    print(f"  [msg {msg_id}] Gemini raw response: {raw[:300]}")
+        except Exception as e:
+            err = str(e)
+            if "429" in err or "RESOURCE_EXHAUSTED" in err:
+                wait = 15 * attempt   # 15s, 30s, 45s
+                print(f"  [msg {msg_id}] rate limited, waiting {wait}s (attempt {attempt}/{MAX_RETRIES})")
+                time.sleep(wait)
+            else:
+                print(f"  [msg {msg_id}] ERROR: {err[:200]}")
+                return []
 
-    raw = re.sub(r"^```(json)?|```$", "", raw, flags=re.MULTILINE).strip()
-
-    try:
-        bets = json.loads(raw)
-        result = bets if isinstance(bets, list) else []
-        print(f"  [msg {msg_id}] extracted {len(result)} bet(s)")
-        return result
-    except json.JSONDecodeError:
-        print(f"  [msg {msg_id}] JSON parse failed: {raw[:200]}")
-        return []
+    print(f"  [msg {msg_id}] gave up after {MAX_RETRIES} retries")
+    return []
 
 
 # ----------------------------------------------------------------------
@@ -154,7 +164,6 @@ def main():
     )
 
     sheet = get_sheet()
-
     state_ws = get_or_create_worksheet(sheet, STATE_TAB, ["channel", "last_message_id"])
     picks_ws = get_or_create_worksheet(sheet, PICKS_TAB, [
         "date_utc", "channel", "message_id", "capper", "sport", "matchup",
@@ -165,9 +174,9 @@ def main():
 
     with tg_client:
         for channel in CHANNELS:
-            print(f"\n=== Processing channel: {channel} ===")
+            print(f"\n=== Channel: {channel} ===")
             last_id = state.get(str(channel), 0)
-            print(f"  Last known message ID: {last_id}")
+            print(f"  Last ID: {last_id}")
 
             try:
                 if last_id:
@@ -176,11 +185,10 @@ def main():
                     messages = list(tg_client.iter_messages(channel, limit=FIRST_RUN_BACKFILL))
                     messages.reverse()
             except Exception as e:
-                print(f"  ERROR reading channel {channel}: {e}")
+                print(f"  ERROR reading channel: {e}")
                 continue
 
-            print(f"  Found {len(messages)} new message(s)")
-
+            print(f"  {len(messages)} new message(s) to process")
             if not messages:
                 continue
 
@@ -196,32 +204,33 @@ def main():
                         buf = BytesIO()
                         tg_client.download_media(msg, file=buf)
                         image_bytes = buf.getvalue()
-                        print(f"  [msg {msg.id}] has photo ({len(image_bytes)} bytes)")
                     elif not text:
                         print(f"  [msg {msg.id}] no text or photo, skipping")
                         continue
 
                     bets = extract_bets(gemini_client, text, image_bytes, msg.id)
-                    if not bets:
-                        continue
 
-                    link = f"https://t.me/{channel}/{msg.id}"
-                    date_str = msg.date.strftime("%Y-%m-%d %H:%M UTC")
+                    if bets:
+                        link = f"https://t.me/{channel}/{msg.id}"
+                        date_str = msg.date.strftime("%Y-%m-%d %H:%M UTC")
+                        for bet in bets:
+                            picks_ws.append_row([
+                                date_str, str(channel), msg.id,
+                                bet.get("capper"), bet.get("sport"), bet.get("matchup"),
+                                bet.get("bet_type"), bet.get("selection"), bet.get("odds"),
+                                bet.get("units_or_confidence"), bet.get("notes"),
+                                link, "",
+                            ])
+                            print(f"  [msg {msg.id}] ROW WRITTEN: {bet.get('capper')} | {bet.get('matchup')} | {bet.get('selection')}")
 
-                    for bet in bets:
-                        picks_ws.append_row([
-                            date_str, str(channel), msg.id,
-                            bet.get("capper"), bet.get("sport"), bet.get("matchup"),
-                            bet.get("bet_type"), bet.get("selection"), bet.get("odds"),
-                            bet.get("units_or_confidence"), bet.get("notes"),
-                            link, "",
-                        ])
-                        print(f"  [msg {msg.id}] wrote row: {bet.get('capper')} | {bet.get('matchup')} | {bet.get('selection')}")
+                    # Pause between every Gemini call to respect rate limits
+                    time.sleep(SECONDS_BETWEEN_CALLS)
+
                 except Exception as e:
-                    print(f"  ERROR on message {msg.id}: {e}")
+                    print(f"  [msg {msg.id}] ERROR: {e}")
 
             save_state(state_ws, str(channel), newest_id)
-            print(f"  State saved. Newest ID: {newest_id}")
+            print(f"  State saved at ID {newest_id}")
 
 
 if __name__ == "__main__":
