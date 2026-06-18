@@ -55,7 +55,7 @@ CHANNEL_CONTEXT = {
         "at the start of each post. Extract the comment as the name. "
         "Do NOT use the channel name as the capper."
         "the comment is generally in this format: OutofLineBets & BankrollBill ➖➖➖➖➖ DM ➡️ @cappersfree."
-        "this wouuld mean there are two cappers in the post: OutofLineBets & BankrollBill"
+        "this wouuld mean there are two cappers in the post: OutofLineBets & BankrollBill. Separate their picks and move on"
     ),
     -1001858676502: (
         "one capper only. his name is Life\'s a Gamble."
