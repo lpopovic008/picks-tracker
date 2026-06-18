@@ -29,7 +29,7 @@ CHANNELS = [
     -1003641992899,            # MONEYCAPPERSFREE
     -1003641018140,            # EXCLUSIVE PLAYS
     -1002077943194,            # CAPPERS FREE 🎰
-    -1001858676502,            # Life’s a Gamble 🎲
+    #-1001858676502,            # Life’s a Gamble 🎲
 ]
 
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
