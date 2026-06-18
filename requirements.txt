@@ -1,5 +1,4 @@
 telethon
 gspread
 google-auth
-google-generativeai
-Pillow
+google-genai
