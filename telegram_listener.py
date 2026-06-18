@@ -26,9 +26,7 @@ import anthropic
 CHANNELS = [
     "betting_intel",           # public: username without @, private: -1001234567890
     -1003984449468,            # CapperSync
-    -1003641992899,            # MONEYCAPPERSFREE
-    -1003641018140,            # EXCLUSIVE PLAYS
-    -1003641018140,            # CAPPERS FREE 🎰
+    -1002077943194,            # CAPPERS FREE 🎰
     -1001858676502,            # Life’s a Gamble 🎲
 ]
 
@@ -51,7 +49,7 @@ CHANNEL_CONTEXT = {
         "at the start of each post. Extract the word after # as the capper name. "
         "Do NOT use the channel name as the capper."
     ),
-    -1003641018140: (
+    -1002077943194: (
         "Aggregator channel. Capper names appear as comments to the post"
         "at the start of each post. Extract the comment as the name. "
         "Do NOT use the channel name as the capper."
@@ -59,16 +57,6 @@ CHANNEL_CONTEXT = {
     -1001858676502: (
         "one capper only. his name is Life\'s a Gamble."
         "not every post of his is a bet. some are recaps (use the green check emoji), some are looking ahead to the match. (no betting terms present)"
-    ),
-    -1003641992899: (
-        "Aggregator channel. Capper names appear as comments to the post"
-        "at the start of each post. Extract the comment as the name. "
-        "Do NOT use the channel name as the capper."
-    ),
-    -1003641018140: (
-        "Aggregator channel. Capper names appear as comments to the post"
-        "at the start of each post. Extract the comment as the name. "
-        "Do NOT use the channel name as the capper."
     )
 }
 
