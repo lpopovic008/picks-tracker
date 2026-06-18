@@ -50,10 +50,12 @@ CHANNEL_CONTEXT = {
         "Do NOT use the channel name as the capper."
     ),
     -1002077943194: (
-        "hint: the capper name is NEVER and I mean NEVER 'cappersfree'."
         "Aggregator channel. Capper names appear as comments to the post"
+        "The capper name is NEVER and I mean NEVER cappersfree."
         "at the start of each post. Extract the comment as the name. "
         "Do NOT use the channel name as the capper."
+        "the comment is generally in this format: OutofLineBets & BankrollBill ➖➖➖➖➖ DM ➡️ @cappersfree."
+        "this wouuld mean there are two cappers in the post: OutofLineBets & BankrollBill"
     ),
     -1001858676502: (
         "one capper only. his name is Life\'s a Gamble."
