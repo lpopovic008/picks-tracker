@@ -2,7 +2,7 @@ name: Picks Grader
 
 on:
   schedule:
-    - cron: "0 */2 * * *"   # every 2 hours
+    - cron: "0 7 * * *"   # 3:00am ET
   workflow_dispatch: {}
 
 jobs:
