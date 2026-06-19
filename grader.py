@@ -155,8 +155,10 @@ def main():
         # Pad short rows
         while len(row) < RESULT_COL:
             row.append("")
-        if row[RESULT_COL - 1].strip():   # result already filled
+        result_val = row[RESULT_COL - 1].strip()
+        if result_val in ("W", "L", "Push"):   # finalized — skip
             continue
+        # blank, no_match, error → retry
         pick = dict(zip(headers, row))
         pick["_row"] = i
         open_picks.append(pick)
