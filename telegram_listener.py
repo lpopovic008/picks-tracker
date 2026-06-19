@@ -86,6 +86,16 @@ Each item must have exactly this shape:
   }}
 ]
 
+BET TYPE RULES:
+- "total": full-game totals only — combined score of BOTH teams (e.g. "OVER 8.5", "UNDER 9 runs")
+- "prop": player props AND team totals — anything scoped to one team or one player.
+  Team total keywords: TT, TTO, TTU, "team total", "team total over", "team total under".
+  Example: "NYY TTO 4.5" → bet_type "prop". "Padres/Cardinals OVER 9.5" → bet_type "total".
+- "spread": point spread or run line bets (e.g. "Lakers -4.5", "Red Sox -1.5")
+- "moneyline": straight win/loss bets (e.g. "Brewers ML", "Warriors +220")
+- "parlay": two or more legs combined
+- "other": anything that doesn't fit the above
+
 MATCHUP FORMAT — always write as "Away City Name vs Home City Name":
 - If the message names a player instead of teams (e.g. "Caitlin Clark over 32.5 PRA"), use web search to find which team that player is on, then search for that team's schedule on the message date to find the opponent and home/away status.
 - If the message names only one team, search for their schedule on the message date to find the opponent.
