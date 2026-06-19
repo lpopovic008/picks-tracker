@@ -2,4 +2,3 @@ telethon
 gspread
 google-auth
 anthropic
-requests
