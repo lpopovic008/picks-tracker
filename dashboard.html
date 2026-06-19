@@ -36,27 +36,37 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .sec-title{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .sec-badge{font-size:10px;color:var(--muted);background:var(--surface);border:.5px solid var(--border);padding:1px 7px;border-radius:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+
+/* ── CAPPER CARD ── */
 .card{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:13px}
 .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:7px}
 .capper-name{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sport{font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:rgba(96,165,250,.12);color:var(--blue);margin-top:3px;display:inline-block}
 .star{background:none;border:none;cursor:pointer;padding:2px;font-size:20px;line-height:1;min-width:30px;min-height:30px;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:transform .1s}
 .star:active{transform:scale(.85)}
-.record{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--muted);margin-bottom:9px}
+.record{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--muted);margin-bottom:4px}
+.l10{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted);margin-bottom:8px;opacity:.75}
 .bar{display:flex;height:5px;border-radius:3px;overflow:hidden;gap:1px;margin-bottom:5px}
-.bar-w{background:var(--green)}
-.bar-l{background:var(--red)}
-.bar-p{background:rgba(255,255,255,.15)}
-.bar-u{background:rgba(255,255,255,.06)}
+.bar-w{background:var(--green)}.bar-l{background:var(--red)}.bar-p{background:rgba(255,255,255,.15)}.bar-u{background:rgba(255,255,255,.06)}
 .pct{font-size:13px;font-family:'JetBrains Mono',monospace;font-weight:500}
-.hot-pct{color:var(--green)}
-.cold-pct{color:var(--red)}
-.mid-pct{color:var(--text)}
-.none-pct{color:var(--muted)}
+.hot-pct{color:var(--green)}.cold-pct{color:var(--red)}.mid-pct{color:var(--text)}.none-pct{color:var(--muted)}
+
+/* ── CONFLICT CARD ── */
+.conflict-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.conflict-card{background:var(--surface);border:.5px solid rgba(245,158,11,.25);border-radius:var(--radius);padding:13px}
+.conflict-game{font-weight:500;font-size:13px;margin-bottom:3px;line-height:1.4}
+.conflict-meta{font-size:11px;color:var(--muted);margin-bottom:10px}
+.conflict-sides{display:flex;flex-direction:column;gap:6px}
+.conflict-side{background:var(--surface2);border-radius:var(--radius-sm);padding:7px 10px}
+.conflict-sel{font-size:12px;font-weight:500;font-family:'JetBrains Mono',monospace;display:block;margin-bottom:2px}
+.conflict-caps{font-size:11px;color:var(--muted)}
+.vs-label{font-size:10px;text-align:center;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
 .empty{font-size:13px;color:var(--muted);padding:6px 0}
 .divider{border:none;border-top:.5px solid var(--border);margin:4px 0 22px}
 @media(max-width:480px){
   .grid{grid-template-columns:1fr 1fr}
+  .conflict-grid{grid-template-columns:1fr}
   .metrics{gap:8px}
   .mc-val{font-size:18px}
 }
@@ -64,7 +74,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 </head>
 <body>
 <div class="wrap">
-
   <div class="header">
     <div>
       <p class="eyebrow">Capper Intel</p>
@@ -84,6 +93,20 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
     <div class="mc"><p class="mc-lbl">Cappers</p><p class="mc-val" id="m-cap">—</p></div>
   </div>
 
+  <!-- CONFLICTS -->
+  <div class="section">
+    <div class="sec-hdr">
+      <span style="font-size:16px">⚔️</span>
+      <span class="sec-title">Conflicting picks</span>
+      <span class="sec-badge" id="conflict-badge">0</span>
+    </div>
+    <div class="conflict-grid" id="conflict-grid"></div>
+    <p class="empty" id="conflict-empty">No active matchups with cappers on opposite sides.</p>
+  </div>
+
+  <hr class="divider">
+
+  <!-- HOT -->
   <div class="section">
     <div class="sec-hdr">
       <span style="font-size:16px">🔥</span>
@@ -96,6 +119,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 
   <hr class="divider">
 
+  <!-- COLD -->
   <div class="section">
     <div class="sec-hdr">
       <span style="font-size:16px">🥶</span>
@@ -108,6 +132,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 
   <hr class="divider">
 
+  <!-- FAVORITES -->
   <div class="section">
     <div class="sec-hdr">
       <span style="font-size:16px">⭐</span>
@@ -117,16 +142,13 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
     <div class="grid" id="fav-grid"></div>
     <p class="empty" id="fav-empty">Tap the star on any capper to pin them here.</p>
   </div>
-
 </div>
+
 <script>
-// ─── CONFIG ──────────────────────────────────────────────
-// Paste your Sheet ID below (the long string from your sheet URL)
 const SHEET_ID = "1NMSGufsCfJYSbEeKp1Zwdgws1UeqY9XxIKQoR6mf3Fg";
 const HOT_PCT  = 55;
 const COLD_PCT = 40;
-const MIN_DEC  = 2;   // minimum graded (W or L) picks to appear in hot/cold
-// ─────────────────────────────────────────────────────────
+const MIN_DEC  = 2;
 
 const FAV_KEY = "ci_favs";
 const favs = new Set(JSON.parse(localStorage.getItem(FAV_KEY) || "[]"));
@@ -138,6 +160,7 @@ function banner(msg, type) {
   el.className = "banner " + (type || "info");
 }
 
+/* ── FETCH ── */
 async function fetchData() {
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Picks`;
   const r = await fetch(url);
@@ -174,12 +197,13 @@ function parseCSV(txt) {
   });
 }
 
+/* ── STATS ── */
 function monthKey() {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}`;
 }
 
-function buildStats(rows) {
+function buildMonthStats(rows) {
   const mk = monthKey();
   const map = {};
   for (const r of rows) {
@@ -203,6 +227,63 @@ function buildStats(rows) {
   });
 }
 
+function buildLast10(rows) {
+  const sorted = [...rows].sort((a, b) =>
+    new Date(b.date_utc || 0) - new Date(a.date_utc || 0)
+  );
+  const capperResults = {};
+  for (const r of sorted) {
+    const name = String(r.capper || "").trim();
+    if (!name) continue;
+    const res = String(r.result || "").trim();
+    if (!["W", "L", "Push"].includes(res)) continue;
+    if (!capperResults[name]) capperResults[name] = [];
+    if (capperResults[name].length < 10) capperResults[name].push(res);
+  }
+  const l10 = {};
+  for (const [name, results] of Object.entries(capperResults)) {
+    const w = results.filter(r => r === "W").length;
+    const l = results.filter(r => r === "L").length;
+    const p = results.filter(r => r === "Push").length;
+    const pct = w + l > 0 ? Math.round(w / (w + l) * 100) : null;
+    l10[name] = { w, l, push: p, pct, count: results.length };
+  }
+  return l10;
+}
+
+function findConflicts(rows) {
+  // Only look at ungraded picks
+  const active = rows.filter(r => !["W","L","Push"].includes(String(r.result || "").trim()));
+
+  // Group by normalised matchup
+  const byMatchup = {};
+  for (const pick of active) {
+    const matchup = String(pick.matchup || "").trim();
+    if (!matchup || matchup.length < 4) continue;
+    const key = matchup.toLowerCase();
+    if (!byMatchup[key]) byMatchup[key] = { matchup, sport: pick.sport || "", picks: [] };
+    byMatchup[key].picks.push(pick);
+  }
+
+  const conflicts = [];
+  for (const { matchup, sport, picks } of Object.values(byMatchup)) {
+    if (picks.length < 2) continue;
+    // Group by selection
+    const bySide = {};
+    for (const pick of picks) {
+      const sel = String(pick.selection || "unknown").trim();
+      if (!bySide[sel]) bySide[sel] = [];
+      bySide[sel].push(String(pick.capper || "?").trim());
+    }
+    // Only flag if cappers are on DIFFERENT sides
+    if (Object.keys(bySide).length > 1) {
+      conflicts.push({ matchup, sport, sides: bySide, total: picks.length });
+    }
+  }
+  return conflicts.sort((a, b) => a.matchup.localeCompare(b.matchup));
+}
+
+/* ── RENDER HELPERS ── */
 function pctClass(p) {
   if (p === null) return "none-pct";
   if (p >= HOT_PCT) return "hot-pct";
@@ -210,25 +291,30 @@ function pctClass(p) {
   return "mid-pct";
 }
 
-function makeCard(c) {
+function makeCard(c, l10) {
   const isFav = favs.has(c.name);
-  const tot = c.tot || 1;
   const rec = `${c.w}W · ${c.l}L${c.push > 0 ? ` · ${c.push}P` : ""}${c.pend > 0 ? ` · ${c.pend} pending` : ""}`;
-  const pctTxt = c.pct !== null ? `${c.pct}% win rate` : "No results yet";
-  const sp = c.sport || "—";
+  const pctTxt = c.pct !== null ? `${c.pct}% this month` : "No results yet";
   const safeName = c.name.replace(/'/g, "\\'");
+
+  const stat = l10 ? l10[c.name] : null;
+  const l10txt = stat && stat.count > 0
+    ? `L${stat.count}: ${stat.w}W · ${stat.l}L${stat.push > 0 ? ` · ${stat.push}P` : ""}${stat.pct !== null ? ` (${stat.pct}%)` : ""}`
+    : "";
+
   return `
 <div class="card">
   <div class="card-top">
     <div style="flex:1;min-width:0">
       <p class="capper-name" title="${c.name}">${c.name}</p>
-      <span class="sport">${sp}</span>
+      <span class="sport">${c.sport || "—"}</span>
     </div>
     <button class="star" onclick="toggleFav('${safeName}')" aria-label="${isFav?"Unstar":"Star"} ${c.name}">
       ${isFav ? "⭐" : "☆"}
     </button>
   </div>
   <p class="record">${rec}</p>
+  ${l10txt ? `<p class="l10">${l10txt}</p>` : ""}
   <div class="bar">
     ${c.w    > 0 ? `<div class="bar-w" style="flex:${c.w}"></div>` : ""}
     ${c.l    > 0 ? `<div class="bar-l" style="flex:${c.l}"></div>` : ""}
@@ -239,13 +325,34 @@ function makeCard(c) {
 </div>`;
 }
 
-function fill(gridId, emptyId, badgeId, caps) {
-  document.getElementById(gridId).innerHTML  = caps.map(makeCard).join("");
-  document.getElementById(emptyId).style.display = caps.length ? "none" : "";
-  document.getElementById(badgeId).textContent = caps.length;
+function makeConflictCard(conflict) {
+  const sideKeys = Object.keys(conflict.sides);
+  const sidesHtml = sideKeys.map((sel, i) => {
+    const caps = conflict.sides[sel].join(", ");
+    return `
+    ${i > 0 ? '<p class="vs-label">vs</p>' : ""}
+    <div class="conflict-side">
+      <span class="conflict-sel">${sel}</span>
+      <span class="conflict-caps">${caps}</span>
+    </div>`;
+  }).join("");
+
+  return `
+<div class="conflict-card">
+  <p class="conflict-game">${conflict.matchup}</p>
+  <p class="conflict-meta">${conflict.sport ? conflict.sport + " · " : ""}${conflict.total} capper${conflict.total > 1 ? "s" : ""}</p>
+  <div class="conflict-sides">${sidesHtml}</div>
+</div>`;
 }
 
-let allCaps = [];
+function fill(gridId, emptyId, badgeId, items, html) {
+  document.getElementById(gridId).innerHTML  = items.map(html).join("");
+  document.getElementById(emptyId).style.display = items.length ? "none" : "";
+  document.getElementById(badgeId).textContent = items.length;
+}
+
+/* ── MAIN RENDER ── */
+let allCaps = [], l10Data = {}, allRows = [];
 
 function render() {
   const n = new Date();
@@ -262,9 +369,12 @@ function render() {
   const cold = allCaps.filter(c=>c.pct!==null && c.dec>=MIN_DEC && c.pct<=COLD_PCT).sort((a,b)=>a.pct-b.pct).slice(0,6);
   const fav  = allCaps.filter(c=>favs.has(c.name)).sort((a,b)=>(b.pct??-1)-(a.pct??-1));
 
-  fill("hot-grid",  "hot-empty",  "hot-badge",  hot);
-  fill("cold-grid", "cold-empty", "cold-badge", cold);
-  fill("fav-grid",  "fav-empty",  "fav-badge",  fav);
+  const conflicts = findConflicts(allRows);
+
+  fill("conflict-grid", "conflict-empty", "conflict-badge", conflicts, makeConflictCard);
+  fill("hot-grid",  "hot-empty",  "hot-badge",  hot,  c => makeCard(c, l10Data));
+  fill("cold-grid", "cold-empty", "cold-badge", cold, c => makeCard(c, l10Data));
+  fill("fav-grid",  "fav-empty",  "fav-badge",  fav,  c => makeCard(c, l10Data));
 }
 
 function toggleFav(name) {
@@ -273,15 +383,14 @@ function toggleFav(name) {
   render();
 }
 
+/* ── LOAD ── */
 async function load() {
-  if (SHEET_ID === "YOUR_SHEET_ID_HERE") {
-    banner("Open dashboard.html and replace YOUR_SHEET_ID_HERE with your actual Google Sheet ID.", "err");
-    return;
-  }
   banner("Connecting to sheet...", "info");
   try {
     const rows = await fetchData();
-    allCaps = buildStats(rows);
+    allRows  = rows;
+    allCaps  = buildMonthStats(rows);
+    l10Data  = buildLast10(rows);
     render();
     banner(`Loaded ${rows.length} picks across ${allCaps.length} cappers.`, "ok");
     setTimeout(() => { document.getElementById("banner").style.display = "none"; }, 3000);
