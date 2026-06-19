@@ -252,32 +252,37 @@ function buildLast10(rows) {
 }
 
 function findConflicts(rows) {
-  // Only look at ungraded picks
-  const active = rows.filter(r => !["W","L","Push"].includes(String(r.result || "").trim()));
+  const CONFLICT_TYPES = ["spread", "moneyline", "total"];
 
-  // Group by normalised matchup
-  const byMatchup = {};
+  // Only ungraded picks on spread/moneyline/total bet types
+  const active = rows.filter(r => {
+    const res = String(r.result || "").trim();
+    const bet = String(r.bet_type || "").trim().toLowerCase();
+    return !["W","L","Push"].includes(res) && CONFLICT_TYPES.includes(bet);
+  });
+
+  // Group by matchup + bet_type so different bet types on same game are separate
+  const byKey = {};
   for (const pick of active) {
     const matchup = String(pick.matchup || "").trim();
     if (!matchup || matchup.length < 4) continue;
-    const key = matchup.toLowerCase();
-    if (!byMatchup[key]) byMatchup[key] = { matchup, sport: pick.sport || "", picks: [] };
-    byMatchup[key].picks.push(pick);
+    const betType = String(pick.bet_type || "").trim().toLowerCase();
+    const key = `${matchup.toLowerCase()}|${betType}`;
+    if (!byKey[key]) byKey[key] = { matchup, sport: pick.sport || "", betType, picks: [] };
+    byKey[key].picks.push(pick);
   }
 
   const conflicts = [];
-  for (const { matchup, sport, picks } of Object.values(byMatchup)) {
+  for (const { matchup, sport, betType, picks } of Object.values(byKey)) {
     if (picks.length < 2) continue;
-    // Group by selection
     const bySide = {};
     for (const pick of picks) {
       const sel = String(pick.selection || "unknown").trim();
       if (!bySide[sel]) bySide[sel] = [];
       bySide[sel].push(String(pick.capper || "?").trim());
     }
-    // Only flag if cappers are on DIFFERENT sides
     if (Object.keys(bySide).length > 1) {
-      conflicts.push({ matchup, sport, sides: bySide, total: picks.length });
+      conflicts.push({ matchup, sport, betType, sides: bySide, total: picks.length });
     }
   }
   return conflicts.sort((a, b) => a.matchup.localeCompare(b.matchup));
@@ -340,7 +345,7 @@ function makeConflictCard(conflict) {
   return `
 <div class="conflict-card">
   <p class="conflict-game">${conflict.matchup}</p>
-  <p class="conflict-meta">${conflict.sport ? conflict.sport + " · " : ""}${conflict.total} capper${conflict.total > 1 ? "s" : ""}</p>
+  <p class="conflict-meta">${conflict.sport ? conflict.sport + " · " : ""}${conflict.betType} · ${conflict.total} capper${conflict.total > 1 ? "s" : ""}</p>
   <div class="conflict-sides">${sidesHtml}</div>
 </div>`;
 }
