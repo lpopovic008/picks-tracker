@@ -139,19 +139,38 @@ function banner(msg, type) {
 }
 
 async function fetchData() {
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Picks&headers=1`;
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Picks`;
   const r = await fetch(url);
-  if (!r.ok) throw new Error(`Sheet returned ${r.status}. Make sure it is shared to "Anyone with the link can view" in Google Sheets.`);
+  if (!r.ok) throw new Error(`Sheet not reachable (${r.status}). Check your Sheet ID.`);
   const txt = await r.text();
-  const m = txt.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
-  if (!m) throw new Error("Could not parse sheet response.");
-  const d = JSON.parse(m[1]);
-  if (d.status !== "ok") throw new Error("Sheet access denied. Share the sheet as Viewer to Anyone with the link.");
-  const cols = d.table.cols.map(c => (c.label || "").toLowerCase().replace(/\s+/g, "_"));
-  return (d.table.rows || []).filter(r => r && r.c).map(r => {
-    const o = {};
-    r.c.forEach((c, i) => { if (cols[i]) o[cols[i]] = c?.v ?? ""; });
-    return o;
+  if (!txt || txt.trim().length < 5) throw new Error("Sheet returned empty data.");
+  if (txt.toLowerCase().includes("signin") || txt.toLowerCase().includes("<html")) {
+    throw new Error('Sheet is private. Go to Google Sheets → Share → "Anyone with the link" → Viewer.');
+  }
+  return parseCSV(txt);
+}
+
+function parseCSVLine(line) {
+  const out = []; let cur = ""; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+    else if (c === ',' && !inQ) { out.push(cur.trim()); cur = ""; }
+    else cur += c;
+  }
+  out.push(cur.trim());
+  return out;
+}
+
+function parseCSV(txt) {
+  const lines = txt.trim().split("\n").filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g,"").toLowerCase().replace(/\s+/g,"_"));
+  return lines.slice(1).map(line => {
+    const vals = parseCSVLine(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (vals[i] || "").replace(/^"|"$/g,""); });
+    return obj;
   });
 }
 
@@ -255,7 +274,7 @@ function toggleFav(name) {
 }
 
 async function load() {
-  if (SHEET_ID === "1NMSGufsCfJYSbEeKp1Zwdgws1UeqY9XxIKQoR6mf3Fg") {
+  if (SHEET_ID === "YOUR_SHEET_ID_HERE") {
     banner("Open dashboard.html and replace YOUR_SHEET_ID_HERE with your actual Google Sheet ID.", "err");
     return;
   }
