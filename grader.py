@@ -10,6 +10,7 @@ import os
 import re
 import json
 import time
+from datetime import datetime, timedelta, timezone
 
 import gspread
 from google.oauth2.service_account import Credentials
@@ -130,7 +131,9 @@ def main():
 
     headers = all_values[0]
 
-    # Collect rows that need grading
+    # Only retry picks from the last 7 days
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+
     open_picks = []
     for i, row in enumerate(all_values[1:], start=2):
         while len(row) < RESULT_COL:
@@ -138,8 +141,15 @@ def main():
         result_val = row[RESULT_COL - 1].strip()
         if result_val in ("W", "L", "Push"):   # final — skip
             continue
-        # blank / no_match / error / pending → retry
+        # blank / no_match / error → retry only if within last 7 days
         pick = dict(zip(headers, row))
+        date_str = str(pick.get("date_utc", ""))[:10]
+        try:
+            pick_date = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue   # can't parse date — skip
+        if pick_date < cutoff:
+            continue   # too old — skip
         pick["_row"] = i
         open_picks.append(pick)
 
