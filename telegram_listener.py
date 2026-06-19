@@ -39,28 +39,18 @@ CHANNELS = [
 # Value = plain-English description of the channel's posting format
 # ------------------------------------------------------------------
 CHANNEL_CONTEXT = {
-    "betting-intel": (
+    "channel_username_one": (
         "Aggregator channel. Each post covers a different capper. "
-        "The capper name appears at the very start of the message text or image caption or in the image itself."
+        "The capper name appears at the very start of the message text or image caption "
         "before the pick details. Do NOT use the channel name as the capper."
     ),
-    -1003984449468: (
+    -1001234567890: (
         "Aggregator channel. Capper names appear as hashtags like #HammeringHank "
         "at the start of each post. Extract the word after # as the capper name. "
         "Do NOT use the channel name as the capper."
     ),
-    -1002077943194: (
-        "Aggregator channel. Capper names appear as comments to the post"
-        "The capper name is NEVER and I mean NEVER cappersfree."
-        "at the start of each post. Extract the comment as the name. "
-        "Do NOT use the channel name as the capper."
-        "the comment is generally in this format: OutofLineBets & BankrollBill ➖➖➖➖➖ DM ➡️ @cappersfree."
-        "this wouuld mean there are two cappers in the post: OutofLineBets & BankrollBill. Separate their picks and move on"
-    ),
-    -1001858676502: (
-        "one capper only. his name is Life\'s a Gamble."
-        "not every post of his is a bet. some are recaps (use the green check emoji), some are looking ahead to the match. (no betting terms present)"
-    )
+    # Single-capper channel example:
+    # "johnnybets_official": "Single capper channel. Every post is from 'JohnnyBets'.",
 }
 
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
@@ -95,6 +85,16 @@ Each item must have exactly this shape:
     "notes": string or null
   }}
 ]
+
+MATCHUP FORMAT — always write as "Away City Name vs Home City Name":
+- If the message names a player instead of teams (e.g. "Caitlin Clark over 32.5 PRA"), use web search to find which team that player is on, then search for that team's schedule on the message date to find the opponent and home/away status.
+- If the message names only one team, search for their schedule on the message date to find the opponent.
+- If the message clearly names both teams, identify which is home and which is away.
+- Format: "Atlanta Dream vs Indiana Fever" — full city and team name, nothing else. No odds, no time, no stadium.
+
+SPORT FORMAT — always plain English, never abbreviations or league names:
+  football | basketball | baseball | soccer | tennis | hockey | golf | mma | boxing
+Never use: NFL, NBA, WNBA, MLB, NHL, MLS, NCAA, UFL, FIFA, or any other abbreviation.
 
 pick_status rules:
 - "new_pick": a fresh bet posted for the first time; the game has not yet started
@@ -167,7 +167,7 @@ def load_existing_picks(ws):
 # Claude extraction
 # ----------------------------------------------------------------------
 
-def extract_bets(claude_client, text, image_bytes, msg_id, channel):
+def extract_bets(claude_client, text, image_bytes, msg_id, channel, msg_date):
     content = []
 
     if image_bytes:
@@ -187,7 +187,7 @@ def extract_bets(claude_client, text, image_bytes, msg_id, channel):
 
     content.append({
         "type": "text",
-        "text": f"Message text/caption:\n{text or '(none)'}"
+        "text": f"Message date: {msg_date}\nMessage text/caption:\n{text or '(none)'}"
     })
 
     channel_context = CHANNEL_CONTEXT.get(
@@ -196,22 +196,37 @@ def extract_bets(claude_client, text, image_bytes, msg_id, channel):
         "Do not use the channel name as the capper name."
     )
     prompt = build_prompt(channel, channel_context)
+    messages = [{"role": "user", "content": content}]
 
     try:
-        response = claude_client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=1000,
-            system=prompt,
-            messages=[{"role": "user", "content": content}],
-        )
-        raw = response.content[0].text.strip()
-        raw = re.sub(r"^```(json)?|```$", "", raw, flags=re.MULTILINE).strip()
-        bets = json.loads(raw)
-        result = bets if isinstance(bets, list) else []
-        new_picks = [b for b in result if b.get("pick_status") == "new_pick"]
-        skipped = len(result) - len(new_picks)
-        print(f"  [msg {msg_id}] {len(new_picks)} new pick(s), {skipped} skipped (recap/result/promo)")
-        return new_picks
+        for _ in range(6):
+            response = claude_client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=1500,
+                system=prompt,
+                tools=[{"type": "web_search_20250305", "name": "web_search"}],
+                messages=messages,
+            )
+
+            if response.stop_reason == "end_turn":
+                raw = "".join(b.text for b in response.content if b.type == "text").strip()
+                raw = re.sub(r"^```(json)?|```$", "", raw, flags=re.MULTILINE).strip()
+                bets = json.loads(raw)
+                result = bets if isinstance(bets, list) else []
+                new_picks = [b for b in result if b.get("pick_status") == "new_pick"]
+                skipped = len(result) - len(new_picks)
+                print(f"  [msg {msg_id}] {len(new_picks)} new pick(s), {skipped} skipped (recap/result/promo)")
+                return new_picks
+
+            if response.stop_reason == "tool_use":
+                messages.append({"role": "assistant", "content": response.content})
+                tool_results = [
+                    {"type": "tool_result", "tool_use_id": b.id, "content": ""}
+                    for b in response.content if b.type == "tool_use"
+                ]
+                messages.append({"role": "user", "content": tool_results})
+
+        return []
 
     except Exception as e:
         print(f"  [msg {msg_id}] ERROR: {str(e)[:200]}")
@@ -285,7 +300,8 @@ def main():
                         print(f"  [msg {msg.id}] no text or photo, skipping")
                         continue
 
-                    bets = extract_bets(claude_client, text, image_bytes, msg.id, channel)
+                    msg_date = msg.date.strftime("%Y-%m-%d")
+                    bets = extract_bets(claude_client, text, image_bytes, msg.id, channel, msg_date)
 
                     for bet in bets:
                         date_str = msg.date.strftime("%Y-%m-%d %H:%M UTC")
