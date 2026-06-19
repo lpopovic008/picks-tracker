@@ -28,3 +28,6 @@ jobs:
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python telegram_listener.py
+
+# telegram-listener.yml — add this anywhere
+# updated
